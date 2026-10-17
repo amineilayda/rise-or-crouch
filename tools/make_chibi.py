@@ -1,10 +1,13 @@
 """Portrelere benzeyen basit "chibi" karakterleri (büyük kafa, kısa gövde,
 tişört, kot, ayakkabı) KayKit Rig_Medium iskeletine giydirerek üretir.
 
-Her parça tek bir kemiğe tam ağırlıkla bağlanır; böylece
+Parçalar KayKit iskeletinin kemiklerine bağlanır; böylece
 make_animations.py'nin bütün animasyonları bu karakterlerde de çalışır.
-Her renk ayrı malzeme = flame_3d'de ayrı yüzey; bir yüzey en fazla 16 kemik
-kullanabildiği için bu bölme sınırın altında kalmayı da garantiler.
+Dirsek, bilek, diz ve belde köşeler iki kemiğe yumuşak geçişli ağırlıkla
+bağlanır ve kollarla bacaklar boylarınca sık halkalara bölünür: eklemler
+kırılmadan, yuvarlak bükülür. Her renk ayrı malzeme = flame_3d'de ayrı yüzey;
+bir yüzey en fazla 16 kemik kullanabildiği için bu bölme sınırın altında
+kalmayı da garantiler.
 
 Kullanım:
   blender --background --factory-startup --python tools/make_chibi.py -- <iskelet_kaynağı.glb> <karakter> <çıktı.glb>
@@ -100,28 +103,56 @@ def _finish(bm, name, mat, bone_for, smooth=True):
     return obj
 
 
-def sphere(name, center, radii, mat, bone, segments=24, rings=16, keep=None):
-    """Elipsoid. keep(co) verilirse yalnızca onu sağlayan köşeler kalır."""
+def sphere(name, center, radii, mat, bone, segments=32, rings=20, keep=None, cut=None):
+    """Elipsoid. keep(co) verilirse yalnızca onu sağlayan köşeler kalır.
+    cut(co) verilirse kesik kenardaki köşeler o yüksekliğe indirilip yüzeye
+    oturtulur: kenar halkadan halkaya basamaklanmaz, düz bir çizgi olur."""
     bm = bmesh.new()
     bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=rings, radius=1.0)
     bmesh.ops.transform(bm, matrix=Matrix.Diagonal((*radii, 1)), verts=bm.verts)
     bmesh.ops.translate(bm, vec=Vector(center), verts=bm.verts)
     if keep is not None:
         bmesh.ops.delete(bm, geom=[v for v in bm.verts if not keep(v.co)], context="VERTS")
+    if cut is not None:
+        c = Vector(center)
+        for v in [v for v in bm.verts if v.is_boundary]:
+            z = cut(v.co)
+            # Aynı yükseklikte elipsoidin kesiti: x, y ona göre ölçeklenir.
+            k = 1 - ((z - c.z) / radii[2]) ** 2
+            rx, ry = v.co.x - c.x, v.co.y - c.y
+            r = math.sqrt((rx / radii[0]) ** 2 + (ry / radii[1]) ** 2)
+            if k <= 0 or r == 0:
+                continue
+            s = math.sqrt(k) / r
+            v.co = Vector((c.x + rx * s, c.y + ry * s, z))
     return _finish(bm, name, mat, bone)
+
+
+# Kapsülün uzayan gövdesinde halkalar arası en fazla bu kadar (m).
+RING_STEP = 0.04
+
+
+def _split_long(bm, axis, length):
+    """Uzatılmış kürenin ekvatordaki uzun kenarlarını halkalara böler: tek
+    şerit yerine eklem hizasında da köşe olur, kol / bacak yuvarlak bükülür."""
+    cuts = max(int(length / RING_STEP), 1)
+    long_edges = [e for e in bm.edges
+                  if abs(e.verts[0].co[axis] - e.verts[1].co[axis]) > length * 0.5]
+    bmesh.ops.subdivide_edges(bm, edges=long_edges, cuts=cuts, use_grid_fill=True)
 
 
 def capsule_x(name, x0, x1, z, radius, mat, bone, y=0.0):
     """X ekseni boyunca uzanan, uçları yuvarlak silindir (kollar)."""
     length = x1 - x0
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=12, radius=radius)
+    bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=16, radius=radius)
     # Küreyi ortadan uzat: ekvatorun bir yanındaki köşeleri kaydır.
     for v in bm.verts:
         v.co = Vector((v.co.z, v.co.y, -v.co.x))  # kutupları X eksenine döndür
         if v.co.x > 0:
             v.co.x += length - 2 * radius
         v.co += Vector((x0 + radius, y, z))
+    _split_long(bm, 0, length - 2 * radius)
     return _finish(bm, name, mat, bone)
 
 
@@ -129,11 +160,12 @@ def capsule_z(name, x, y, z0, z1, radius, mat, bone):
     """Z ekseni boyunca dikey silindir (bacaklar)."""
     length = z1 - z0
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=12, radius=radius)
+    bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=16, radius=radius)
     for v in bm.verts:
         if v.co.z > 0:
             v.co.z += length - 2 * radius
         v.co += Vector((x, y, z0 + radius))
+    _split_long(bm, 2, length - 2 * radius)
     return _finish(bm, name, mat, bone)
 
 
@@ -170,7 +202,7 @@ def head_surface_y(x, z, grow=1.0):
 
 
 # Kafa ve yüz (karakter -Y yönüne bakıyor).
-sphere("Head", HEAD_C, HEAD_R, SKIN, "head")
+sphere("Head", HEAD_C, HEAD_R, SKIN, "head", 48, 32)
 for side in (-1, 1):
     # Kulaklar (uzun / küt saç kapatıyor)
     if spec["hair_style"] in ("short", "curly"):
@@ -201,15 +233,15 @@ def cap(cut_front, cut_back, face_open=None):
     """Kafayı saran saç kepi: alın hizasında önde, ensede arkada kesilir.
     face_open verilirse (−1..0) yüzün önü dışında her yer cut_back'e kadar
     iner (yanlarda çeneye kadar küt saç)."""
-    def keep(co):
+    def cut(co):
         t = (co.y - HEAD_C.y) / hair_r[1]  # −1 ön, +1 arka
         if face_open is None:
-            cut = cut_front + (cut_back - cut_front) * (t + 1) / 2
-        else:
-            k = min(max((t - face_open) / 0.25 + 0.5, 0.0), 1.0)
-            cut = cut_front + (cut_back - cut_front) * k
-        return co.z > cut
-    return sphere("Hair", HEAD_C, hair_r, HAIR, "head", 64, 40, keep)
+            return cut_front + (cut_back - cut_front) * (t + 1) / 2
+        k = min(max((t - face_open) / 0.25 + 0.5, 0.0), 1.0)
+        return cut_front + (cut_back - cut_front) * k
+
+    return sphere("Hair", HEAD_C, hair_r, HAIR, "head", 96, 64,
+                  keep=lambda co: co.z > cut(co), cut=cut)
 
 
 if style == "short":
@@ -234,9 +266,26 @@ elif style == "curly":
         pos = HEAD_C + Vector((d.x * hair_r[0], d.y * hair_r[1], d.z * hair_r[2]))
         sphere(f"Curl{i}", pos, (0.12, 0.12, 0.12), HAIR, "head", 12, 8)
 
+# --- Yumuşak geçişli ağırlıklar ---
+# Eklemin iki yanında bu genişlikte bir bölgede köşe iki kemiğe paylaştırılır.
+BLEND = 0.12
+
+
+def blend(value, joint, before, after, width=BLEND):
+    """[joint]'in [before] tarafı ilk kemiğe, öbür tarafı ikinciye; arada
+    [width] genişliğinde yumuşak (smoothstep) geçiş. {kemik: ağırlık} döner."""
+    t = min(max((value - joint) / width + 0.5, 0.0), 1.0)
+    t = t * t * (3 - 2 * t)
+    if t <= 0:
+        return {before: 1.0}
+    if t >= 1:
+        return {after: 1.0}
+    return {before: 1 - t, after: t}
+
+
 # --- Gövde ---
 def torso_bone(co):
-    return "chest" if co.z > chest_z else "spine"
+    return blend(co.z, chest_z, "spine", "chest")
 
 
 sphere("Torso", (0, 0, (hip_z + head_z) / 2 + 0.05), (0.33, 0.25, (head_z - hip_z) / 2 + 0.08), SHIRT, torso_bone)
@@ -245,11 +294,9 @@ sphere("Torso", (0, 0, (hip_z + head_z) / 2 + 0.05), (0.33, 0.25, (head_z - hip_
 def arm_bone(side):
     def pick(co):
         x = abs(co.x)
-        if x < elbow_x:
-            return f"upperarm.{side}"
-        if x < wrist_x:
-            return f"lowerarm.{side}"
-        return f"hand.{side}"
+        if x < (elbow_x + wrist_x) / 2:
+            return blend(x, elbow_x, f"upperarm.{side}", f"lowerarm.{side}")
+        return blend(x, wrist_x, f"lowerarm.{side}", f"hand.{side}")
     return pick
 
 
@@ -257,7 +304,7 @@ for side, sgn in (("l", 1), ("r", -1)):
     # Kısa kollu tişört: kolluk, ardından ten rengi kol ve yumruk el.
     sleeve = capsule_x(f"Sleeve.{side}", shoulder_x - 0.06, shoulder_x + 0.2, arm_z, 0.125, SHIRT, f"upperarm.{side}")
     limb = capsule_x(f"Arm.{side}", shoulder_x + 0.1, hand_x, arm_z, 0.09, SKIN, arm_bone(side))
-    hand = sphere(f"Hand.{side}", (hand_x + 0.04, 0, arm_z), (0.115, 0.115, 0.115), SKIN, f"hand.{side}", 16, 10)
+    hand = sphere(f"Hand.{side}", (hand_x + 0.04, 0, arm_z), (0.115, 0.115, 0.115), SKIN, f"hand.{side}", 24, 16)
     if sgn < 0:
         for obj in (sleeve, limb, hand):
             for v in obj.data.vertices:
@@ -269,21 +316,25 @@ sphere("Pelvis", (0, 0, hip_z + 0.1), (0.31, 0.23, 0.17), PANTS, "hips")
 
 
 def leg_bone(side):
-    return lambda co: f"upperleg.{side}" if co.z > knee_z else f"lowerleg.{side}"
+    # Diz çömelince 90°'den fazla bükülür: geçiş bölgesi daha geniş tutulur.
+    return lambda co: blend(co.z, knee_z, f"lowerleg.{side}", f"upperleg.{side}", width=0.2)
 
 
 for side, sgn in (("l", 1), ("r", -1)):
     capsule_z(f"Leg.{side}", sgn * leg_x, 0, ankle_z - 0.02, hip_z + 0.12, 0.125, PANTS, leg_bone(side))
-    sphere(f"Shoe.{side}", (sgn * leg_x, -0.05, 0.075), (0.14, 0.2, 0.09), SHOE, f"foot.{side}", 16, 10)
+    sphere(f"Shoe.{side}", (sgn * leg_x, -0.05, 0.075), (0.14, 0.2, 0.09), SHOE, f"foot.{side}", 24, 16)
 
 # --- Kemiklere bağla, tek parça yap ---
 for obj, bone_for in parts:
     groups = {}
     for v in obj.data.vertices:
-        name = bone_for(v.co)
-        if name not in groups:
-            groups[name] = obj.vertex_groups.get(name) or obj.vertex_groups.new(name=name)
-        groups[name].add([v.index], 1.0, "REPLACE")
+        weights = bone_for(v.co)
+        if isinstance(weights, str):
+            weights = {weights: 1.0}
+        for name, weight in weights.items():
+            if name not in groups:
+                groups[name] = obj.vertex_groups.get(name) or obj.vertex_groups.new(name=name)
+            groups[name].add([v.index], weight, "REPLACE")
 
 bpy.ops.object.select_all(action="DESELECT")
 for obj, _ in parts:

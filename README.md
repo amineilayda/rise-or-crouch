@@ -1,5 +1,16 @@
 # Rise or Crouch
 
+> **Bütün bölümleri test için açmak:** Normalde bölümler sırayla açılır. Hepsine
+> hemen bakmak için [`lib/game/data/player_profile.dart`](lib/game/data/player_profile.dart)
+> içindeki `isPlayable` fonksiyonunda koşulun başına `true ||` ekleyin:
+>
+> ```dart
+> bool isPlayable(int index) =>
+>     index < levelCount && (true || allCompleted || index == completedLevels.value);
+> ```
+>
+> Teste bitince `true ||` kısmını geri silin.
+
 **Deve mi, cüce mi?** Liderin komutuna göre ekranı kaydırarak kalk (DEVE) ya da
 eğil (CÜCE). Flutter ve [Flame 3D](https://pub.dev/packages/flame_3d) ile yapılmış,
 9 bölümlük 3D refleks oyunu.
