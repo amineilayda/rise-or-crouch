@@ -6,7 +6,7 @@ import '../../l10n/strings.dart';
 import '../theme.dart';
 
 /// Rakip seni kör edince: ekran bulanıklaşır, ortada üstü çizili göz
-/// (assets/images/icons/blind.png) nabız gibi atar, altında kimin yaptığı yazar.
+/// (assets/images/icons/blind.webp) nabız gibi atar, altında kimin yaptığı yazar.
 /// Dokunuşları engellemez; kaydırmalar oyuna geçer.
 class BlindedOverlay extends StatefulWidget {
   const BlindedOverlay({super.key, required this.name});
@@ -55,7 +55,7 @@ class _BlindedOverlayState extends State<BlindedOverlay>
                   child: child,
                 ),
                 child: Image.asset(
-                  'assets/images/icons/blind.png',
+                  'assets/images/icons/blind.webp',
                   width: 110,
                   height: 110,
                   cacheWidth: 256,

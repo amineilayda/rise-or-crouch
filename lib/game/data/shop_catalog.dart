@@ -35,7 +35,7 @@ final List<ShopItem> shopCatalog = [
   // Kalıcı: her bölüme bir can fazlasıyla başlanır.
   ShopItem(
     id: 'extra_life',
-    icon: 'assets/images/icons/heart.png',
+    icon: 'assets/images/icons/heart.webp',
     price: 100,
     maxOwned: 3,
     owned: (profile) => profile.extraLives.value,
@@ -44,7 +44,7 @@ final List<ShopItem> shopCatalog = [
   // Tek kullanımlık: oyunda ayna butonuyla lider 4 sn kör edilir.
   ShopItem(
     id: 'blind',
-    icon: 'assets/images/icons/mirror.png',
+    icon: 'assets/images/icons/mirror.webp',
     price: 200,
     maxOwned: 5,
     owned: (profile) => profile.blindCharges.value,
@@ -54,7 +54,7 @@ final List<ShopItem> shopCatalog = [
   // ters kontrolüne (ve laf sokmalarına) karşı korunulur.
   ShopItem(
     id: 'shield',
-    icon: 'assets/images/icons/shield.png',
+    icon: 'assets/images/icons/shield.webp',
     price: 80,
     maxOwned: 5,
     owned: (profile) => profile.shieldCharges.value,

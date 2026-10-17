@@ -377,12 +377,12 @@ class RiseCrouchGame extends FlameGame3D<World3D, StageCamera>
     _hud
       ..portraits = [
         for (var i = 1; i < rowSize; i++)
-          await portraitImages.load('player$i.png'),
+          await portraitImages.load('player$i.webp'),
       ]
       ..portraitNames = characterNames
       // Büyük resimler bellekte yer kaplamasın diye küçültülerek açılır.
-      ..arrow = await _loadScaled('assets/images/icons/arrow.png', 256)
-      ..heart = await _loadScaled('assets/images/icons/heart.png', 128);
+      ..arrow = await _loadScaled('assets/images/icons/arrow.webp', 256)
+      ..heart = await _loadScaled('assets/images/icons/heart.webp', 128);
     await FlameAudio.audioCache.load(_buzzerFile);
 
     // Gökyüzü 3D sahnenin arkasında çizilir (3D katmanın arkası şeffaf).

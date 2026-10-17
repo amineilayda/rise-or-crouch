@@ -47,7 +47,7 @@ class _GameOptionsState extends State<GameOptions> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _PowerButton(
-                    icon: 'assets/images/icons/shield.png',
+                    icon: 'assets/images/icons/shield.webp',
                     charges: menu.shieldCharges,
                     enabled: menu.canUseShield,
                     active: menu.shieldActive,
@@ -56,7 +56,7 @@ class _GameOptionsState extends State<GameOptions> {
                   ),
                   const SizedBox(height: 12),
                   _PowerButton(
-                    icon: 'assets/images/icons/mirror.png',
+                    icon: 'assets/images/icons/mirror.webp',
                     charges: menu.blindCharges,
                     enabled: menu.canUseBlind,
                     active: menu.blindActive,

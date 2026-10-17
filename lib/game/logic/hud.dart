@@ -162,7 +162,7 @@ class Hud extends Component with HasGameReference {
     _toastTime = 0;
   }
 
-  /// Komut oku (assets/images/icons/arrow.png; resim sağa bakıyor). Yüklenene
+  /// Komut oku (assets/images/icons/arrow.webp; resim sağa bakıyor). Yüklenene
   /// kadar null; o zaman yalnızca yazı gösterilir.
   ui.Image? arrow;
 
@@ -234,7 +234,7 @@ class Hud extends Component with HasGameReference {
     ]);
   }
 
-  /// Sol alttaki canlar (assets/images/icons/heart.png). Giden can gri ve soluk
+  /// Sol alttaki canlar (assets/images/icons/heart.webp). Giden can gri ve soluk
   /// çizilir; gittiği an titreyip küçülür.
   ui.Image? heart;
   int _lives = 0;
