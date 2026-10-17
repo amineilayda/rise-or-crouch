@@ -5,7 +5,7 @@ import '../../viewmodel/menu_view_model.dart';
 import '../theme.dart';
 import '../widgets/buttons.dart';
 
-/// 13 dil, her biri kendi dilindeki adıyla; seçili olan yeşil çerçeveli.
+/// 17 dil, her biri kendi dilindeki adıyla; seçili olan yeşil çerçeveli.
 class LanguagePage extends StatelessWidget {
   const LanguagePage({super.key, required this.menu});
 

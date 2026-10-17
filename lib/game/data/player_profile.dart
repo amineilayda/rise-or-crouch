@@ -84,10 +84,9 @@ class PlayerProfile {
     extraLives.value = prefs.getInt(_extraLivesKey) ?? 0;
     blindCharges.value = prefs.getInt(_blindChargesKey) ?? 0;
     shieldCharges.value = prefs.getInt(_shieldChargesKey) ?? 0;
-    language.value = AppLanguage.fromCode(
-      prefs.getString(_languageKey) ??
-          PlatformDispatcher.instance.locale.languageCode,
-    );
+    language.value =
+        AppLanguage.fromName(prefs.getString(_languageKey)) ??
+        AppLanguage.fromLocales(PlatformDispatcher.instance.locales);
     L.language = language.value;
   }
 
